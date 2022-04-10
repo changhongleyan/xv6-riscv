@@ -75,6 +75,7 @@ sys_read(void)
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argaddr(1, &p) < 0)
     return -1;
+
   return fileread(f, p, n);
 }
 
@@ -87,7 +88,7 @@ sys_write(void)
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argaddr(1, &p) < 0)
     return -1;
-
+  
   return filewrite(f, p, n);
 }
 
@@ -96,7 +97,6 @@ sys_close(void)
 {
   int fd;
   struct file *f;
-
   if(argfd(0, &fd, &f) < 0)
     return -1;
   myproc()->ofile[fd] = 0;
@@ -243,12 +243,12 @@ create(char *path, short type, short major, short minor)
 {
   struct inode *ip, *dp;
   char name[DIRSIZ];
-
-  if((dp = nameiparent(path, name)) == 0)
+  // get the last dir inode of the path
+  if((dp = nameiparent(path, name)) == 0)  
     return 0;
 
   ilock(dp);
-
+  // traverse the dir to find the file
   if((ip = dirlookup(dp, name, 0)) != 0){
     iunlockput(dp);
     ilock(ip);
@@ -257,7 +257,7 @@ create(char *path, short type, short major, short minor)
     iunlockput(ip);
     return 0;
   }
-
+  // not find
   if((ip = ialloc(dp->dev, type)) == 0)
     panic("create: ialloc");
 
@@ -294,7 +294,7 @@ sys_open(void)
 
   if((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &omode) < 0)
     return -1;
-
+ 
   begin_op();
 
   if(omode & O_CREATE){
@@ -343,6 +343,16 @@ sys_open(void)
 
   if((omode & O_TRUNC) && ip->type == T_FILE){
     itrunc(ip);
+  }
+  
+  if(omode & O_RDFIFO){
+    readi(f->ip, 0, (uint64)&f->fifo, 0, 8);
+    f->readable = 1;
+    //f->fifo->readopen = 1;
+  } else if(omode & O_WRFIFO){
+    readi(f->ip, 0, (uint64)&f->fifo, 0, 8);
+    f->writable = 1;
+    //f->fifo->writeopen = 1;
   }
 
   iunlock(ip);
@@ -482,5 +492,88 @@ sys_pipe(void)
     fileclose(wf);
     return -1;
   }
+  return 0;
+}
+
+uint64
+sys_chmod(void)
+{
+  char path[MAXPATH];
+  int mode;
+  struct inode* ip;
+
+  if(argstr(0, path, MAXPATH) < 0 || argint(1, &mode) < 0){
+    return -1;
+  }
+  
+  begin_op();
+  
+  // find inode
+  if((ip = namei(path)) == 0){
+    end_op();
+    return -1;
+  }
+
+  // operation after inode locked
+  ilock(ip);
+  ip->mode = mode;
+  iupdate(ip);
+  iunlock(ip);
+
+  end_op();
+
+  return 0;
+}
+
+uint64
+sys_mkfifo(void)
+{
+  char path[MAXPATH];
+  int omode;
+  struct inode *ip;
+  struct fifo *fi;  // fifo struct address
+
+  if(argstr(0, path, MAXPATH) < 0 || argint(1, &omode) < 0)
+    return -1;
+
+  begin_op();
+
+  if(omode & O_CREATE){
+    ip = create(path, T_FILE, 0, 0);
+    if(ip == 0){
+      end_op();
+      return -1;
+    }
+  } else {
+    if((ip = namei(path)) == 0){
+      end_op();
+      return -1;
+    }
+    ilock(ip);
+  }
+
+  if(ip->type != T_FILE){
+    iunlockput(ip);
+    end_op();
+    printf("not file\n");
+    return -1;
+  }
+  
+  if((fi = fifoalloc()) == 0){
+    iunlockput(ip);
+    end_op();
+    printf("fifoalloc error\n");
+    return -1;
+  }
+  writei(ip, 0, (uint64)&fi, 0, 8);// &fi is kernel address, not user's, can't use filewrite
+  
+  ip->size = 8;
+  ip->mode = 4;                // fifo mode 00000101
+  iupdate(ip);                 // save to disk
+  //printf("inode%d size: %d ref: %d\n", ip->inum, ip->size, ip->ref);
+  
+  iunlockput(ip);
+  end_op();
+
   return 0;
 }

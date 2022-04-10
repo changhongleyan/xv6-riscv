@@ -47,8 +47,12 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
-  if(growproc(n) < 0)
-    return -1;
+  //if(growproc(n) < 0)
+  //  return -1;
+  myproc()->sz += n;
+  if(n < 0){
+    uvmdealloc(myproc()->pagetable, addr, addr+n);
+  }
   return addr;
 }
 
@@ -94,4 +98,15 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+// trace system call
+uint64
+sys_trace(void)
+{ 
+  int mask;
+  if(argint(0, &mask) < 0)
+    return -1;
+  myproc()->mask = mask;
+  return 0;
 }

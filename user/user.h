@@ -23,6 +23,9 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int chmod(const char*, int);
+int trace(int);
+int mkfifo(const char*, int);
 
 // ulib.c
 int stat(const char*, struct stat*);

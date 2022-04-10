@@ -105,7 +105,7 @@ bfree(int dev, uint b)
 // Inodes.
 //
 // An inode describes a single unnamed file.
-// The inode disk structure holds metadata: the file's type,
+// The inode disk structure holds metadata: the file's type, its access mode,
 // its size, the number of links referring to it, and the
 // list of blocks holding the file's content.
 //
@@ -199,11 +199,12 @@ ialloc(uint dev, short type)
   struct buf *bp;
   struct dinode *dip;
 
-  for(inum = 1; inum < sb.ninodes; inum++){
-    bp = bread(dev, IBLOCK(inum, sb));
-    dip = (struct dinode*)bp->data + inum%IPB;
+  for(inum = 1; inum < sb.ninodes; inum++){     // traverse all inode num
+    bp = bread(dev, IBLOCK(inum, sb));          // reach block of the inode
+    dip = (struct dinode*)bp->data + inum%IPB;  // get the inode
     if(dip->type == 0){  // a free inode
       memset(dip, 0, sizeof(*dip));
+      dip->mode = 3;
       dip->type = type;
       log_write(bp);   // mark it allocated on the disk
       brelse(bp);
@@ -227,6 +228,7 @@ iupdate(struct inode *ip)
   bp = bread(ip->dev, IBLOCK(ip->inum, sb));
   dip = (struct dinode*)bp->data + ip->inum%IPB;
   dip->type = ip->type;
+  dip->mode = ip->mode;
   dip->major = ip->major;
   dip->minor = ip->minor;
   dip->nlink = ip->nlink;
@@ -300,6 +302,7 @@ ilock(struct inode *ip)
     bp = bread(ip->dev, IBLOCK(ip->inum, sb));
     dip = (struct dinode*)bp->data + ip->inum%IPB;
     ip->type = dip->type;
+    ip->mode = dip->mode;
     ip->major = dip->major;
     ip->minor = dip->minor;
     ip->nlink = dip->nlink;
@@ -444,6 +447,7 @@ stati(struct inode *ip, struct stat *st)
   st->dev = ip->dev;
   st->ino = ip->inum;
   st->type = ip->type;
+  st->mode = ip->mode;
   st->nlink = ip->nlink;
   st->size = ip->size;
 }

@@ -2,6 +2,7 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 #include "kernel/fs.h"
+#include "kernel/syscall.h"
 
 char*
 fmtname(char *path)
@@ -29,7 +30,6 @@ ls(char *path)
   int fd;
   struct dirent de;
   struct stat st;
-
   if((fd = open(path, 0)) < 0){
     fprintf(2, "ls: cannot open %s\n", path);
     return;
@@ -43,7 +43,7 @@ ls(char *path)
 
   switch(st.type){
   case T_FILE:
-    printf("%s %d %d %l\n", fmtname(path), st.type, st.ino, st.size);
+    printf("%s %d %d %d %d\n", fmtname(path), st.mode, st.type, st.ino, st.size);
     break;
 
   case T_DIR:
@@ -63,7 +63,7 @@ ls(char *path)
         printf("ls: cannot stat %s\n", buf);
         continue;
       }
-      printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
+      printf("%s %d %d %d %d\n", fmtname(buf), st.mode, st.type, st.ino, st.size);
     }
     break;
   }
@@ -74,7 +74,8 @@ int
 main(int argc, char *argv[])
 {
   int i;
-
+  printf("ls:\n");
+  //trace(1<<SYS_open);
   if(argc < 2){
     ls(".");
     exit(0);

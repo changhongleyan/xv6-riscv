@@ -3,6 +3,7 @@ struct context;
 struct file;
 struct inode;
 struct pipe;
+struct fifo;
 struct proc;
 struct spinlock;
 struct sleeplock;
@@ -75,6 +76,10 @@ int             pipealloc(struct file**, struct file**);
 void            pipeclose(struct pipe*, int);
 int             piperead(struct pipe*, uint64, int);
 int             pipewrite(struct pipe*, uint64, int);
+struct fifo*    fifoalloc();
+void            fifoclose(struct fifo *, int);
+int             fifowrite(struct fifo *, uint64, int);
+int             fiforead(struct fifo *, uint64, int);
 
 // printf.c
 void            printf(char*, ...);

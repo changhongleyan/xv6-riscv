@@ -225,6 +225,7 @@ ialloc(ushort type)
 
   bzero(&din, sizeof(din));
   din.type = xshort(type);
+  din.mode = 3;             // read & write
   din.nlink = xshort(1);
   din.size = xint(0);
   winode(inum, &din);

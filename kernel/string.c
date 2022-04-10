@@ -1,4 +1,6 @@
 #include "types.h"
+#include "riscv.h"
+#include "defs.h"
 
 void*
 memset(void *dst, int c, uint n)
@@ -35,7 +37,9 @@ memmove(void *dst, const void *src, uint n)
 
   if(n == 0)
     return dst;
-  
+  /*if(n == 12){
+    printf("dst: %p\nsrc: %p\n", dst, src);
+  }*/
   s = src;
   d = dst;
   if(s < d && s + n > d){

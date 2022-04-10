@@ -4,7 +4,8 @@ struct file {
   char readable;
   char writable;
   struct pipe *pipe; // FD_PIPE
-  struct inode *ip;  // FD_INODE and FD_DEVICE
+  struct fifo *fifo; // FD_FIFO
+  struct inode *ip;  // FD_FIFO FD_INODE and FD_DEVICE
   uint off;          // FD_INODE
   short major;       // FD_DEVICE
 };
@@ -21,7 +22,8 @@ struct inode {
   struct sleeplock lock; // protects everything below here
   int valid;          // inode has been read from disk?
 
-  short type;         // copy of disk inode
+  char type;          // copy of disk inode
+  char mode;          // copy of disk inode
   short major;
   short minor;
   short nlink;
