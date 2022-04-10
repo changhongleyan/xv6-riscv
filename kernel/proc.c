@@ -140,7 +140,7 @@ found:
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
-
+  
   return p;
 }
 
@@ -289,6 +289,9 @@ fork(void)
   }
   np->sz = p->sz;
 
+  // Copy mask from parent to child.
+  np->mask=p->mask;
+  
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
@@ -654,3 +657,4 @@ procdump(void)
     printf("\n");
   }
 }
+

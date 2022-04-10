@@ -35,6 +35,7 @@ filealloc(void)
   for(f = ftable.file; f < ftable.file + NFILE; f++){
     if(f->ref == 0){
       f->ref = 1;
+      f->fifo = 0;
       release(&ftable.lock);
       return f;
     }
@@ -72,10 +73,12 @@ fileclose(struct file *f)
   f->ref = 0;
   f->type = FD_NONE;
   release(&ftable.lock);
-
   if(ff.type == FD_PIPE){
     pipeclose(ff.pipe, ff.writable);
   } else if(ff.type == FD_INODE || ff.type == FD_DEVICE){
+    if(ff.fifo){
+      fifoclose(ff.fifo, ff.writable);
+    }
     begin_op();
     iput(ff.ip);
     end_op();
@@ -89,7 +92,6 @@ filestat(struct file *f, uint64 addr)
 {
   struct proc *p = myproc();
   struct stat st;
-  
   if(f->type == FD_INODE || f->type == FD_DEVICE){
     ilock(f->ip);
     stati(f->ip, &st);
@@ -119,8 +121,19 @@ fileread(struct file *f, uint64 addr, int n)
     r = devsw[f->major].read(1, addr, n);
   } else if(f->type == FD_INODE){
     ilock(f->ip);
-    if((r = readi(f->ip, 1, addr, f->off, n)) > 0)
+    // check mode
+    if(f->ip->mode & 4 && f->fifo){
+      iunlock(f->ip);
+      //printf("reading\n");
+      return fiforead(f->fifo, addr, n);
+    } else if((f->ip->mode & 1) == 0){
+      iunlock(f->ip);
+      printf("error: file is not readable\n");
+      return -1;
+    } else if((r = readi(f->ip, 1, addr, f->off, n)) > 0){
       f->off += r;
+    }
+    
     iunlock(f->ip);
   } else {
     panic("fileread");
@@ -138,7 +151,6 @@ filewrite(struct file *f, uint64 addr, int n)
 
   if(f->writable == 0)
     return -1;
-
   if(f->type == FD_PIPE){
     ret = pipewrite(f->pipe, addr, n);
   } else if(f->type == FD_DEVICE){
@@ -152,17 +164,31 @@ filewrite(struct file *f, uint64 addr, int n)
     // and 2 blocks of slop for non-aligned writes.
     // this really belongs lower down, since writei()
     // might be writing a device like the console.
+    ilock(f->ip);
+    // check mode
+    if(f->ip->mode & 4 && f->fifo){
+      iunlock(f->ip);
+      //printf("writing\n");
+      return fifowrite(f->fifo, addr, n);
+    } else if((f->ip->mode & 1) == 0){
+      iunlock(f->ip);
+      printf("error: file is not readable\n");
+      return -1;
+    } 
+    iunlock(f->ip);
+
     int max = ((MAXOPBLOCKS-1-1-2) / 2) * BSIZE;
     int i = 0;
     while(i < n){
       int n1 = n - i;
       if(n1 > max)
         n1 = max;
-
+      
       begin_op();
       ilock(f->ip);
-      if ((r = writei(f->ip, 1, addr + i, f->off, n1)) > 0)
+      if ((r = writei(f->ip, 1, addr + i, f->off, n1)) > 0){
         f->off += r;
+      }
       iunlock(f->ip);
       end_op();
 

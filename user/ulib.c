@@ -1,7 +1,7 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
-#include "kernel/fcntl.h"
 #include "user/user.h"
+#include "kernel/fcntl.h"
 
 char*
 strcpy(char *s, const char *t)
@@ -75,7 +75,7 @@ stat(const char *n, struct stat *st)
 {
   int fd;
   int r;
-
+  
   fd = open(n, O_RDONLY);
   if(fd < 0)
     return -1;
