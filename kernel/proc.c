@@ -5,8 +5,11 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "fcntl.h"
 
 struct cpu cpus[NCPU];
+
+struct shm shms[NSHM];
 
 struct proc proc[NPROC];
 
@@ -308,6 +311,14 @@ fork(void)
 
   pid = np->pid;
 
+  // copy memory map.
+  for(int i = 0; i < VMASIZE; i++) {
+    if(p->vma[i].used){
+      memmove(&(np->vma[i]), &(p->vma[i]), sizeof(p->vma[i]));
+      filedup(p->vma[i].file);
+    }
+  }
+
   release(&np->lock);
 
   acquire(&wait_lock);
@@ -353,6 +364,34 @@ exit(int status)
       struct file *f = p->ofile[fd];
       fileclose(f);
       p->ofile[fd] = 0;
+    }
+  }
+
+  // Close all memory map.
+  for(int i = 0; i < VMASIZE; i++) {
+    struct vma* vma = &p->vma[i];
+
+    if(vma->used) {
+      int do_free;
+      if(vma->flags & MAP_SHARED){
+        if((vma->flags & MAP_ANON) == 0){
+          if(vma->prot & PROT_WRITE){
+            filewrite(vma->file, vma->va, vma->length);
+          }
+          fileclose(vma->file);
+        }
+        
+        if(vma->shmid && shmclose(vma->shmid)){
+          do_free = 0;
+        }else{
+          do_free = 1;
+        }
+
+      }else{
+        do_free = 1;
+      }
+      uvmunmap(p->pagetable, vma->va, vma->length/PGSIZE, do_free);
+      vma->used = 0;
     }
   }
 
@@ -658,3 +697,67 @@ procdump(void)
   }
 }
 
+void
+shmsinit()
+{
+  char lkname[10] = "shmlock_";
+  for(int i = 0; i < NSHM; ++i){
+    lkname[8] = 'a' + i;
+    initlock(&shms[i].lock, lkname);
+  }
+}
+
+int
+shmget(int key)
+{
+  int id = key % NSHM;
+  acquire(&shms[id].lock);
+  if(shms[id].used == 0){
+    shms[id].used = 1;
+  }
+  release(&shms[id].lock);
+  return id;
+}
+
+uint64
+shmpa_get(int id, int nth)
+{
+  struct shm* s = &shms[id];
+  uint64* pap = &s->pas[nth]; // physical address pointer
+  acquire(&s->lock);
+  if(*pap == 0){
+    if((*pap = (uint64)kalloc()) == 0){
+      release(&s->lock);
+      return 0;
+    }
+  }
+  release(&s->lock);
+  return *pap;
+}
+
+void
+shmdup(int id)
+{
+  struct shm* s = &shms[id];
+  if(s->used < 1)
+    panic("shmdup");
+  acquire(&s->lock);
+  ++s->ref;
+  release(&s->lock);
+}
+
+// return shared memory's reference count
+int
+shmclose(int id)
+{
+  struct shm* s = &shms[id];
+  acquire(&s->lock);
+  if(s->ref < 1)
+    panic("shmclose");
+  if(--s->ref == 0){
+    s->used = 0;
+  }
+  int ref = s->ref;
+  release(&s->lock);
+  return ref;
+}

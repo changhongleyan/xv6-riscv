@@ -48,6 +48,8 @@ argraw(int n)
     return p->trapframe->a4;
   case 5:
     return p->trapframe->a5;
+  case 6:
+    return p->trapframe->a6;
   }
   panic("argraw");
   return -1;
@@ -107,6 +109,9 @@ extern uint64 sys_uptime(void);
 extern uint64 sys_chmod(void);
 extern uint64 sys_trace(void);
 extern uint64 sys_mkfifo(void);
+extern uint64 sys_mmap(void);
+extern uint64 sys_munmap(void);
+extern uint64 sys_shmget(void);
 
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -133,6 +138,9 @@ static uint64 (*syscalls[])(void) = {
 [SYS_chmod]   sys_chmod,
 [SYS_trace]   sys_trace,
 [SYS_mkfifo]  sys_mkfifo,
+[SYS_mmap]    sys_mmap,
+[SYS_munmap]  sys_munmap,
+[SYS_shmget]  sys_shmget,
 };
 
 void
@@ -142,10 +150,10 @@ syscall(void)
   struct proc *p = myproc();
 
   int mask;
-  char *syscall_name[25]={0,"fork","exit","wait","pipe","read","kill","exec",
+  char *syscall_name[28]={0,"fork","exit","wait","pipe","read","kill","exec",
                           "fstat","chdir","dup","getpid","sbrk","sleep","uptime",
                           "open","write","mknod","unlink","link","mkdir","close",
-                          "chmod","trace","mkfifo"};
+                          "chmod","trace","mkfifo", "mmap", "munmap", "shmget"};
 
   num = p->trapframe->a7;                 // before ecall, args in a0~a5, syscall num in a7
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {

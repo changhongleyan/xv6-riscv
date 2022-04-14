@@ -128,7 +128,7 @@ fileread(struct file *f, uint64 addr, int n)
       return fiforead(f->fifo, addr, n);
     } else if((f->ip->mode & 1) == 0){
       iunlock(f->ip);
-      printf("error: file is not readable\n");
+      printf("fileread: file is not readable\n");
       return -1;
     } else if((r = readi(f->ip, 1, addr, f->off, n)) > 0){
       f->off += r;
@@ -170,9 +170,9 @@ filewrite(struct file *f, uint64 addr, int n)
       iunlock(f->ip);
       //printf("writing\n");
       return fifowrite(f->fifo, addr, n);
-    } else if((f->ip->mode & 1) == 0){
+    } else if((f->ip->mode & 2) == 0){
       iunlock(f->ip);
-      printf("error: file is not readable\n");
+      printf("filewrite: file is not writable\n");
       return -1;
     } 
     iunlock(f->ip);

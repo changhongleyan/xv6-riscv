@@ -110,3 +110,12 @@ sys_trace(void)
   myproc()->mask = mask;
   return 0;
 }
+
+uint64
+sys_shmget(void)
+{ 
+  int key;
+  if(argint(0, &key) < 0)
+    return -1;
+  return shmget(key);
+}

@@ -555,14 +555,14 @@ sys_mkfifo(void)
   if(ip->type != T_FILE){
     iunlockput(ip);
     end_op();
-    printf("not file\n");
+    printf("mkfifo: not file\n");
     return -1;
   }
   
   if((fi = fifoalloc()) == 0){
     iunlockput(ip);
     end_op();
-    printf("fifoalloc error\n");
+    printf("mkfifo: fifoalloc error\n");
     return -1;
   }
   writei(ip, 0, (uint64)&fi, 0, 8);// &fi is kernel address, not user's, can't use filewrite
@@ -575,5 +575,108 @@ sys_mkfifo(void)
   iunlockput(ip);
   end_op();
 
+  return 0;
+}
+
+uint64
+sys_mmap(void)
+{
+  uint64 va;
+  int length, prot, flags, fd, offset, shmid;
+  struct file* f = 0;
+  struct proc* p = myproc();
+  
+  if(fd != -1 && argfd(4, &fd, &f)){ // fd=-1为匿名映射，f=0, flags & MAP_ANON !=0
+    return -1;
+  }
+  if(argaddr(0, &va) || argint(1, &length) || argint(2, &prot) ||
+    argint(3, &flags) || argint(5, &offset) || argint(6, &shmid)){
+    return -1;
+  }
+
+  if(va)                // 假设参数va总为0，系统决定映射地址
+    return -1;
+  if(!f->readable){
+    if(prot & PROT_READ)
+      return -1;
+  }
+  if(!f->writable){
+    if((prot & PROT_WRITE) && !(flags & MAP_PRIVATE))
+      return -1;
+  }
+  
+  length = PGROUNDUP(length);
+  if(p->sz > MAXVA - length)
+    return -1;
+  
+  for(int i = 0; i < VMASIZE; ++i){
+    if(p->vma[i].used == 0) {
+      p->vma[i].used = 1;
+      p->vma[i].va = p->sz;
+      p->vma[i].length = length;
+      p->vma[i].prot = prot;
+      p->vma[i].flags = flags;
+      p->vma[i].off = offset;
+      p->vma[i].shmid = shmid;
+      shmdup(shmid);
+      p->vma[i].file = f;
+      filedup(f);
+      p->sz += length;
+      return p->vma[i].va;
+    }
+  }
+  return -1;
+}
+
+uint64
+sys_munmap(void)
+{
+  uint64 va;
+  int length;
+  if(argaddr(0, &va) || argint(1, &length))
+    return -1;
+  struct proc* p = myproc();
+  struct vma* vma = 0;
+  va = PGROUNDDOWN(va);
+  length = PGROUNDUP(length);
+
+  for(int i = 0; i < VMASIZE; ++i) {
+    if (va >= p->vma[i].va && va < p->vma[i].va + p->vma[i].length) {
+      vma = &p->vma[i];
+      break;
+    }
+  }
+
+  if(vma == 0){
+    printf("munmap: address error\n");
+    return -1;
+  }
+  if(va+length > vma->va+vma->length){
+    printf("munmap: length error\n");
+    return -1;
+  }
+
+  if((vma->prot & PROT_WRITE) && (vma->flags & MAP_SHARED)){
+    if(filewrite(vma->file, va, length) < 0){
+      return -1;
+    }
+  }
+  uvmunmap(p->pagetable, va, length/PGSIZE, 1);
+  // head 
+  if(va == vma->va){
+    vma->va += length;
+    vma->length -= length;
+    // whole
+    if(vma->length == 0) {
+      fileclose(vma->file);
+      vma->used = 0;
+    }
+  // tail  
+  }else if(va+length == vma->va+vma->length){
+    vma->length -= length;
+  }else{
+    return -1;
+  }
+  
   return 0;
 }

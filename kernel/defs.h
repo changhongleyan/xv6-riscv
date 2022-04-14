@@ -3,12 +3,14 @@ struct context;
 struct file;
 struct inode;
 struct pipe;
-struct fifo;
 struct proc;
 struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct fifo;
+struct vma;
+struct shm;
 
 // bio.c
 void            binit(void);
@@ -109,6 +111,11 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
+void            shmsinit();
+int             shmget(int);
+uint64          shmpa_get(int, int);
+void            shmdup(int);
+int             shmclose(int);
 
 // swtch.S
 void            swtch(struct context*, struct context*);

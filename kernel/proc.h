@@ -80,6 +80,28 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
+#define NSHM 16
+#define SHMMAXSIZE 16
+struct shm{
+  int used;
+  int ref;
+  uint64 pas[SHMMAXSIZE];  // physical address array for kalloc()
+  int size;
+  struct spinlock lock;
+};
+
+#define VMASIZE 16
+struct vma{
+  int used;
+  uint64 va; // virtual address
+  int length;
+  int prot;   // PROT_READ PROT_WRITE PROT_EXEC
+  int flags;  // MAP_PRIVATE MAP_PRIVATE MAP_ANON 
+  int off;
+  int shmid;
+  struct file *file;
+};
+
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -106,4 +128,5 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
   int mask;                    // trace mask
+  struct vma vma[VMASIZE];
 };

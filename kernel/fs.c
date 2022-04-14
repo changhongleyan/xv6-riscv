@@ -204,7 +204,7 @@ ialloc(uint dev, short type)
     dip = (struct dinode*)bp->data + inum%IPB;  // get the inode
     if(dip->type == 0){  // a free inode
       memset(dip, 0, sizeof(*dip));
-      dip->mode = 3;
+      dip->mode = 3;   // default readable and writable
       dip->type = type;
       log_write(bp);   // mark it allocated on the disk
       brelse(bp);

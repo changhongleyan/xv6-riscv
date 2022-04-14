@@ -2,7 +2,6 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 #include "kernel/fs.h"
-#include "kernel/syscall.h"
 
 char*
 fmtname(char *path)
@@ -75,7 +74,6 @@ main(int argc, char *argv[])
 {
   int i;
   printf("ls:\n");
-  //trace(1<<SYS_open);
   if(argc < 2){
     ls(".");
     exit(0);

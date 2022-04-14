@@ -6,6 +6,11 @@
 #include "proc.h"
 #include "defs.h"
 
+#include "fcntl.h"
+#include "fs.h"
+#include "sleeplock.h"
+#include "file.h"
+
 struct spinlock tickslock;
 uint ticks;
 
@@ -67,21 +72,68 @@ usertrap(void)
     syscall();
   } else if(r_scause() == 13 || r_scause() == 15){
     //page fault
-    uint64 fault_user_addr = r_stval();
-    //printf("page fault: %p\n",fault_user_addr);//debuging
-    if(fault_user_addr >= p->sz || fault_user_addr <= PGROUNDDOWN(p->trapframe->sp)){
+    uint64 fva = r_stval(); // fault virtual address
+    //printf("page fault: %p\n", fua);//debuging
+    // address out of range
+    if(fva > MAXVA || fva >= p->sz || fva <= PGROUNDDOWN(p->trapframe->sp)){
       p->killed = 1;
-    } else {
-      void *pa;
-      if((pa = kalloc()) == 0){
-        p->killed = 1;
-      } else {
-        memset(pa, 0, PGSIZE);
-        if(mappages(p->pagetable, PGROUNDDOWN(fault_user_addr), PGSIZE, (uint64)pa, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
-          kfree(pa);
+      goto END;
+    }
+    // lazy memory map page allocation
+    struct vma* vma = 0;
+    int i;
+    for (i = 0; i < VMASIZE; i++) {
+      if (p->vma[i].used == 1 && fva >= p->vma[i].va && fva < p->vma[i].va + p->vma[i].length) {
+        vma = &p->vma[i];
+        break;
+      }
+    }
+    fva = PGROUNDDOWN(fva); // page-aligned
+    if(vma){
+      void* pa;
+      if(vma->flags & MAP_SHARED){
+        int nth = (fva - vma->va) / PGSIZE;
+        if((pa = (void*)shmpa_get(vma->shmid, nth)) == 0){
           p->killed = 1;
+          goto END;
+        }
+      } else{
+        if((pa = kalloc()) == 0){
+          p->killed = 1;
+          goto END;
         }
       }
+      memset(pa, 0, PGSIZE);
+
+      if((vma->flags & MAP_ANON) == 0){
+        uint64 offset = fva - vma->va + vma->off;
+        ilock(vma->file->ip);
+        readi(vma->file->ip, 0, (uint64)pa, offset, PGSIZE);
+        iunlock(vma->file->ip);
+      }
+      
+      int flag = PTE_U;
+      if(vma->prot & PROT_READ) flag |= PTE_R;
+      if(vma->prot & PROT_WRITE) flag |= PTE_W;
+      if(vma->prot & PROT_EXEC) flag |= PTE_X;
+
+      if((mappages(p->pagetable, fva, PGSIZE, (uint64)pa, flag) != 0)){
+        kfree(pa);
+        p->killed = 1;
+      }
+      printf("mappages fva: %p pa: %p\n", fva, pa);
+      goto END;
+    }
+    // lazy page allocation
+    void* pa;
+    if((pa = kalloc()) == 0){
+      p->killed = 1;
+      goto END;
+    }
+    memset(pa, 0, PGSIZE);
+    if(mappages(p->pagetable, fva, PGSIZE, (uint64)pa, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
+      kfree(pa);
+      p->killed = 1;
     }
   } else if((which_dev = devintr()) != 0){
     // ok
@@ -90,7 +142,7 @@ usertrap(void)
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
   }
-
+  END:
   if(p->killed)
     exit(-1);
 

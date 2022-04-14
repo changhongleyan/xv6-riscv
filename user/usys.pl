@@ -39,3 +39,6 @@ entry("uptime");
 entry("chmod");
 entry("trace");
 entry("mkfifo");
+entry("mmap");
+entry("munmap");
+entry("shmget");
