@@ -3,7 +3,6 @@
 #include "kernel/fs.h"
 #include "user/user.h"
 
-
 void
 find(char *path, char *name)
 {

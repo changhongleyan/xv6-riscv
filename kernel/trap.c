@@ -121,7 +121,7 @@ usertrap(void)
         kfree(pa);
         p->killed = 1;
       }
-      printf("mappages fva: %p pa: %p\n", fva, pa);
+      //printf("mappages fva: %p pa: %p\n", fva, pa);
       goto END;
     }
     // lazy page allocation
