@@ -9,9 +9,6 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
-struct fifo;
-struct vma;
-struct shm;
 
 // bio.c
 void            binit(void);
@@ -79,10 +76,18 @@ int             pipealloc(struct file**, struct file**);
 void            pipeclose(struct pipe*, int);
 int             piperead(struct pipe*, uint64, int);
 int             pipewrite(struct pipe*, uint64, int);
+
+// fifo.c
 struct fifo*    fifoalloc();
 void            fifoclose(struct fifo *, int);
 int             fifowrite(struct fifo *, uint64, int);
 int             fiforead(struct fifo *, uint64, int);
+
+// shm.c
+void            shmsinit();
+uint64          shmget(int, int, int);
+uint64          shmpa_get(int, int);
+int             shmclose(int);
 
 // printf.c
 void            printf(char*, ...);
@@ -112,11 +117,6 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
-void            shmsinit();
-int             shmget(int);
-uint64          shmpa_get(int, int);
-void            shmdup(int);
-int             shmclose(int);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -183,6 +183,7 @@ uint64          walkaddr(pagetable_t, uint64);
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
+uint64          mmap(uint64, int, int, int, struct file*, int, int);
 
 // plic.c
 void            plicinit(void);

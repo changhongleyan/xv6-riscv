@@ -11,19 +11,31 @@ struct data{
 
 int
 main(int argc, char **argv)
-{      
-    char* path = "mmap";
+{
     int key = 2;
     
     int pid = fork();
     if(pid == 0){
-        int fd = open(path, O_CREATE | O_RDWR);
-        int shmid = shmget(key);
-        if(shmid < 0){
+        struct data* p = (struct data*)shmget(key, sizeof(struct data), IPC_CREATE);
+        if(p == 0){
             printf("shmget: error\n");
+            exit(1);
         }
-        struct data* p = (struct data*)mmap(0, sizeof(struct data), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0, shmid);
-        close(fd);
+        
+        char readbuf[100];
+        printf("reading\n");
+        while(p->length == 0){
+            sleep(1);
+        }
+        memmove(readbuf, p->data, p->length);
+        p->length -= strlen(readbuf);
+        printf("read: %s\n", readbuf);
+    } else {
+        struct data* p = (struct data*)shmget(key, sizeof(struct data), IPC_CREATE);
+        if(p == 0){
+            printf("shmget: error\n");
+            exit(1);
+        }
 
         char* buf = "Hello world!";
         p->length = 0;
@@ -31,23 +43,7 @@ main(int argc, char **argv)
         memmove(p->data, buf, strlen(buf));
         p->length += strlen(buf);
         printf("write OK\n");
-    }else{
-        int fd = open(path, O_CREATE | O_RDWR);
-        int shmid = shmget(key);
-        if(shmid < 0){
-            printf("shmget: error\n");
-        }
-        struct data* p = (struct data*)mmap(0, sizeof(struct data), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0, shmid);
-        close(fd);
-        
-        char readbuf[100];
-        while(p->length == 0){
-            sleep(1);
-        }
-        printf("reading\n");
-        memmove(readbuf, p->data, p->length);
-        p->length -= strlen(readbuf);
-        printf("read: %s\n", readbuf);
+        wait(0);
     }
     
     exit(0);

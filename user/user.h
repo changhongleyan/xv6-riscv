@@ -26,9 +26,9 @@ int uptime(void);
 int chmod(const char*, int);
 int trace(int);
 int mkfifo(const char*, int);
-void* mmap(void* addr, int length, int prot, int flags, int fd, int offset, int shmid);
+void* mmap(void* addr, int length, int prot, int flags, int fd, int offset);
 int munmap(void *addr, int length);
-int shmget(int);
+void* shmget(int, int, int);
 
 // ulib.c
 int stat(const char*, struct stat*);

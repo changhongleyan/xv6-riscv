@@ -80,15 +80,7 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
-#define NSHM 16
-#define SHMMAXSIZE 16
-struct shm{
-  int used;
-  int ref;
-  uint64 pas[SHMMAXSIZE];  // physical address array for kalloc()
-  int size;
-  struct spinlock lock;
-};
+
 
 #define VMASIZE 16
 struct vma{

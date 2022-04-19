@@ -344,7 +344,7 @@ sys_open(void)
   if((omode & O_TRUNC) && ip->type == T_FILE){
     itrunc(ip);
   }
-  
+  // fifo
   if(omode & O_RDFIFO){
     readi(f->ip, 0, (uint64)&f->fifo, 0, 8);
     f->readable = 1;
@@ -525,6 +525,7 @@ sys_chmod(void)
   return 0;
 }
 
+// create a fifo struct, and write its address to the inode
 uint64
 sys_mkfifo(void)
 {
@@ -582,50 +583,42 @@ uint64
 sys_mmap(void)
 {
   uint64 va;
-  int length, prot, flags, fd, offset, shmid;
+  int length, prot, flags, fd, offset;
   struct file* f = 0;
   struct proc* p = myproc();
   
-  if(fd != -1 && argfd(4, &fd, &f)){ // fd=-1为匿名映射，f=0, flags & MAP_ANON !=0
+  if(argaddr(0, &va) || argint(1, &length) || argint(2, &prot) ||
+    argint(3, &flags) || argint(5, &offset)){
     return -1;
   }
-  if(argaddr(0, &va) || argint(1, &length) || argint(2, &prot) ||
-    argint(3, &flags) || argint(5, &offset) || argint(6, &shmid)){
+  
+  if(flags & MAP_ANON){ // MAP_ANON为匿名映射，fd=-1, f=0
+    argint(4, &fd);
+    if(fd != -1)
+      return -1;
+  }else if(argfd(4, &fd, &f)){
     return -1;
   }
 
   if(va)                // 假设参数va总为0，系统决定映射地址
     return -1;
-  if(!f->readable){
-    if(prot & PROT_READ)
-      return -1;
-  }
-  if(!f->writable){
-    if((prot & PROT_WRITE) && !(flags & MAP_PRIVATE))
-      return -1;
+
+  if(f){
+    if(!f->readable){
+      if(prot & PROT_READ)
+        return -1;
+    }
+    if(!f->writable){
+      if((prot & PROT_WRITE) && !(flags & MAP_PRIVATE))
+        return -1;
+    }
   }
   
   length = PGROUNDUP(length);
   if(p->sz > MAXVA - length)
     return -1;
-  
-  for(int i = 0; i < VMASIZE; ++i){
-    if(p->vma[i].used == 0) {
-      p->vma[i].used = 1;
-      p->vma[i].va = p->sz;
-      p->vma[i].length = length;
-      p->vma[i].prot = prot;
-      p->vma[i].flags = flags;
-      p->vma[i].off = offset;
-      p->vma[i].shmid = shmid;
-      shmdup(shmid);
-      p->vma[i].file = f;
-      filedup(f);
-      p->sz += length;
-      return p->vma[i].va;
-    }
-  }
-  return -1;
+
+  return mmap(p->sz, length, prot, flags, f, offset, -1);
 }
 
 uint64

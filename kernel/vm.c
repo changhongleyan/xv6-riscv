@@ -459,3 +459,27 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+uint64
+mmap(uint64 va, int length, int prot, int flags, struct file* f, int offset, int shmid)
+{
+  struct proc* p = myproc();
+  
+  for(int i = 0; i < VMASIZE; ++i){
+    if(p->vma[i].used == 0) {
+      p->vma[i].used = 1;
+      p->vma[i].va = va;
+      p->vma[i].length = length;
+      p->vma[i].prot = prot;
+      p->vma[i].flags = flags;
+      p->vma[i].off = offset;
+      p->vma[i].shmid = shmid;
+      p->vma[i].file = f;
+      if(f)
+        filedup(f);
+      p->sz += length;
+      return p->vma[i].va;
+    }
+  }
+  return -1;
+}

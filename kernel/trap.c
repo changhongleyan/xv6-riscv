@@ -80,9 +80,9 @@ usertrap(void)
       goto END;
     }
     // lazy memory map page allocation
+    void* pa = 0;
     struct vma* vma = 0;
-    int i;
-    for (i = 0; i < VMASIZE; i++) {
+    for (int i = 0; i < VMASIZE; i++) {
       if (p->vma[i].used == 1 && fva >= p->vma[i].va && fva < p->vma[i].va + p->vma[i].length) {
         vma = &p->vma[i];
         break;
@@ -90,18 +90,26 @@ usertrap(void)
     }
     fva = PGROUNDDOWN(fva); // page-aligned
     if(vma){
-      void* pa;
-      if(vma->flags & MAP_SHARED){
+      // shared memory
+      if(vma->shmid != -1){
         int nth = (fva - vma->va) / PGSIZE;
-        if((pa = (void*)shmpa_get(vma->shmid, nth)) == 0){
+        pa = (void*)shmpa_get(vma->shmid, nth);
+        if(pa == 0){
           p->killed = 1;
           goto END;
         }
-      } else{
-        if((pa = kalloc()) == 0){
+
+        if(mappages(p->pagetable, fva, PGSIZE, (uint64)pa, PTE_R|PTE_W|PTE_X|PTE_U) != 0){
+          kfree(pa);
           p->killed = 1;
-          goto END;
         }
+        goto END;
+      }
+      // disk file map
+      pa = kalloc();
+      if(pa == 0){
+        p->killed = 1;
+        goto END;
       }
       memset(pa, 0, PGSIZE);
 
@@ -117,24 +125,23 @@ usertrap(void)
       if(vma->prot & PROT_WRITE) flag |= PTE_W;
       if(vma->prot & PROT_EXEC) flag |= PTE_X;
 
-      if((mappages(p->pagetable, fva, PGSIZE, (uint64)pa, flag) != 0)){
+      if(mappages(p->pagetable, fva, PGSIZE, (uint64)pa, flag) != 0){
         kfree(pa);
         p->killed = 1;
       }
-      //printf("mappages fva: %p pa: %p\n", fva, pa);
       goto END;
     }
     // lazy page allocation
-    void* pa;
     if((pa = kalloc()) == 0){
       p->killed = 1;
       goto END;
     }
     memset(pa, 0, PGSIZE);
-    if(mappages(p->pagetable, fva, PGSIZE, (uint64)pa, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
+    if(mappages(p->pagetable, fva, PGSIZE, (uint64)pa, PTE_R|PTE_W|PTE_X|PTE_U) != 0){
       kfree(pa);
       p->killed = 1;
     }
+    //printf("mappages fva: %p pa: %p\n", fva, pa);
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {
@@ -142,6 +149,7 @@ usertrap(void)
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
   }
+
   END:
   if(p->killed)
     exit(-1);

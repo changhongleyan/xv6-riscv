@@ -114,8 +114,8 @@ sys_trace(void)
 uint64
 sys_shmget(void)
 { 
-  int key;
-  if(argint(0, &key) < 0)
+  int key, size, shmflg;
+  if(argint(0, &key) || argint(1, &size) || argint(2, &shmflg))
     return -1;
-  return shmget(key);
+  return shmget(key, size, shmflg);
 }
