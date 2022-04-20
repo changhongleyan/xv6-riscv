@@ -465,7 +465,7 @@ mmap(uint64 va, int length, int prot, int flags, struct file* f, int offset, int
 {
   struct proc* p = myproc();
   
-  for(int i = 0; i < VMASIZE; ++i){
+  for(int i = 0; i < PVMASIZE; ++i){
     if(p->vma[i].used == 0) {
       p->vma[i].used = 1;
       p->vma[i].va = va;

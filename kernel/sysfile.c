@@ -633,7 +633,7 @@ sys_munmap(void)
   va = PGROUNDDOWN(va);
   length = PGROUNDUP(length);
 
-  for(int i = 0; i < VMASIZE; ++i) {
+  for(int i = 0; i < PVMASIZE; ++i) {
     if (va >= p->vma[i].va && va < p->vma[i].va + p->vma[i].length) {
       vma = &p->vma[i];
       break;

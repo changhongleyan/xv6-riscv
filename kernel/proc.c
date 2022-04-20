@@ -289,9 +289,6 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
-
-  // Copy mask from parent to child.
-  np->mask=p->mask;
   
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
@@ -310,10 +307,17 @@ fork(void)
   pid = np->pid;
 
   // copy memory map.
-  for(int i = 0; i < VMASIZE; i++) {
+  for(int i = 0; i < PVMASIZE; i++) {
     if(p->vma[i].used){
       memmove(&(np->vma[i]), &(p->vma[i]), sizeof(p->vma[i]));
       filedup(p->vma[i].file);
+    }
+  }
+
+  // copy all open message queue
+  for(int i = 0; i < PMSQSIZE; ++i){
+    if(p->msg_qid[i]){
+      np->msg_qid[i] = msgdup(p->msg_qid[i]);
     }
   }
 
@@ -366,7 +370,7 @@ exit(int status)
   }
 
   // Close all memory map.
-  for(int i = 0; i < VMASIZE; i++) {
+  for(int i = 0; i < PVMASIZE; i++) {
     struct vma* vma = &p->vma[i];
 
     if(vma->used) {
@@ -375,7 +379,6 @@ exit(int status)
         if(shmclose(vma->shmid)){
           do_free = 0;
         }
-        printf("do_free: %d\n", do_free);
       } else if((vma->flags & MAP_ANON) == 0) {
         if((vma->flags & MAP_SHARED) && (vma->prot & PROT_WRITE))
           filewrite(vma->file, vma->va, vma->length);
@@ -383,6 +386,14 @@ exit(int status)
       }
       uvmunmap(p->pagetable, vma->va, vma->length/PGSIZE, do_free);
       vma->used = 0;
+    }
+  }
+
+  // close all open message queue
+  for(int i = 0; i < PMSQSIZE; ++i){
+    if(p->msg_qid[i]){
+      msgclose(p->msg_qid[i]);
+      p->msg_qid[i] = 0;
     }
   }
 

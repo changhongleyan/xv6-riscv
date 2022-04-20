@@ -18,7 +18,7 @@ struct shm{
 struct shm shms[NSHM];
 
 void
-shmsinit()
+shminit()
 {
   char lkname[10] = "shmlock_";
   for(int i = 0; i < NSHM; ++i){

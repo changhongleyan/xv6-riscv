@@ -4,8 +4,8 @@ struct file {
   char readable;
   char writable;
   struct pipe *pipe; // FD_PIPE
-  struct fifo *fifo; // FD_FIFO
-  struct inode *ip;  // FD_FIFO FD_INODE and FD_DEVICE
+  struct fifo *fifo;
+  struct inode *ip;  // FD_INODE and FD_DEVICE
   uint off;          // FD_INODE
   short major;       // FD_DEVICE
 };

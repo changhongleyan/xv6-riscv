@@ -82,7 +82,7 @@ usertrap(void)
     // lazy memory map page allocation
     void* pa = 0;
     struct vma* vma = 0;
-    for (int i = 0; i < VMASIZE; i++) {
+    for (int i = 0; i < PVMASIZE; i++) {
       if (p->vma[i].used == 1 && fva >= p->vma[i].va && fva < p->vma[i].va + p->vma[i].length) {
         vma = &p->vma[i];
         break;

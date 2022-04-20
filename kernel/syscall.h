@@ -21,8 +21,11 @@
 #define SYS_mkdir  20
 #define SYS_close  21
 #define SYS_chmod  22
-#define SYS_trace  23
-#define SYS_mkfifo 24
-#define SYS_mmap   25
-#define SYS_munmap 26
-#define SYS_shmget 27
+#define SYS_mkfifo 23
+#define SYS_mmap   24
+#define SYS_munmap 25
+#define SYS_shmget 26
+#define SYS_msgget 27
+#define SYS_msgsnd 28
+#define SYS_msgrcv 29
+#define SYS_msgclose 30

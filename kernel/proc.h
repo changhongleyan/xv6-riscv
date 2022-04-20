@@ -81,8 +81,8 @@ struct trapframe {
 };
 
 
-
-#define VMASIZE 16
+#define PMSQSIZE 4
+#define PVMASIZE 16
 struct vma{
   int used;
   uint64 va; // virtual address
@@ -119,6 +119,6 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-  int mask;                    // trace mask
-  struct vma vma[VMASIZE];
+  struct vma vma[PVMASIZE];
+  int msg_qid[PMSQSIZE];
 };

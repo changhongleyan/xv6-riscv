@@ -107,11 +107,14 @@ extern uint64 sys_wait(void);
 extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
 extern uint64 sys_chmod(void);
-extern uint64 sys_trace(void);
 extern uint64 sys_mkfifo(void);
 extern uint64 sys_mmap(void);
 extern uint64 sys_munmap(void);
 extern uint64 sys_shmget(void);
+extern uint64 sys_msgget(void);
+extern uint64 sys_msgsnd(void);
+extern uint64 sys_msgrcv(void);
+extern uint64 sys_msgclose(void);
 
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -136,11 +139,14 @@ static uint64 (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 [SYS_chmod]   sys_chmod,
-[SYS_trace]   sys_trace,
 [SYS_mkfifo]  sys_mkfifo,
 [SYS_mmap]    sys_mmap,
 [SYS_munmap]  sys_munmap,
 [SYS_shmget]  sys_shmget,
+[SYS_msgget]  sys_msgget,
+[SYS_msgsnd]  sys_msgsnd,
+[SYS_msgrcv]  sys_msgrcv,
+[SYS_msgclose] sys_msgclose,
 };
 
 void
@@ -149,12 +155,6 @@ syscall(void)
   int num;
   struct proc *p = myproc();
 
-  int mask;
-  char *syscall_name[28]={0,"fork","exit","wait","pipe","read","kill","exec",
-                          "fstat","chdir","dup","getpid","sbrk","sleep","uptime",
-                          "open","write","mknod","unlink","link","mkdir","close",
-                          "chmod","trace","mkfifo", "mmap", "munmap", "shmget"};
-
   num = p->trapframe->a7;                 // before ecall, args in a0~a5, syscall num in a7
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     p->trapframe->a0 = syscalls[num]();   // syscall return value
@@ -162,10 +162,5 @@ syscall(void)
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);
     p->trapframe->a0 = -1;
-  }
-  mask = p->mask;
-  if(mask & (1<<num))
-  {
-    printf("%d: syscall %s -> %d\n", p->pid, syscall_name[num], p->trapframe->a0);
   }
 }

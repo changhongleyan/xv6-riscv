@@ -23,12 +23,15 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int chmod(const char*, int);
-int trace(int);
-int mkfifo(const char*, int);
+int chmod(const char* path, int mode);
+int mkfifo(const char* path, int omode);
 void* mmap(void* addr, int length, int prot, int flags, int fd, int offset);
 int munmap(void *addr, int length);
-void* shmget(int, int, int);
+void* shmget(int key, int size, int shmflg);
+int msgget(int key, int msgflg);
+int msgsnd(int id, void* addr, int length);
+int msgrcv(int id, void* addr, int size, int type);
+int msgclose(int id);
 
 // ulib.c
 int stat(const char*, struct stat*);

@@ -100,17 +100,6 @@ sys_uptime(void)
   return xticks;
 }
 
-// trace system call
-uint64
-sys_trace(void)
-{ 
-  int mask;
-  if(argint(0, &mask) < 0)
-    return -1;
-  myproc()->mask = mask;
-  return 0;
-}
-
 uint64
 sys_shmget(void)
 { 
@@ -118,4 +107,42 @@ sys_shmget(void)
   if(argint(0, &key) || argint(1, &size) || argint(2, &shmflg))
     return -1;
   return shmget(key, size, shmflg);
+}
+
+uint64
+sys_msgget(void)
+{
+  int key, msgflg;
+  if(argint(0, &key) || argint(1, &msgflg))
+    return -1;
+  return msgget(key, msgflg);
+}
+
+uint64
+sys_msgsnd(void)
+{
+  int id, length;
+  uint64 va;
+  if(argint(0, &id) || argaddr(1, &va) || argint(2, &length))
+    return -1;
+  return msgsnd(id, va, length);
+}
+
+uint64
+sys_msgrcv(void)
+{
+  int id, size, type;
+  uint64 va;
+  if(argint(0, &id) || argaddr(1, &va) || argint(2, &size) || argint(3, &type))
+    return -1;
+  return msgrcv(id, va, size, type);
+}
+
+uint64
+sys_msgclose(void)
+{
+  int id;
+  if(argint(0, &id))
+    return -1;
+  return msgclose(id);
 }

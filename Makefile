@@ -26,6 +26,7 @@ OBJS = \
   $K/pipe.o \
   $K/fifo.o \
   $K/shm.o \
+  $K/msg.o \
   $K/exec.o \
   $K/sysfile.o \
   $K/kernelvec.o \
@@ -138,7 +139,7 @@ UPROGS=\
 	$U/_find\
 	$U/_chmod\
 	$U/_fifotest\
-	$U/_mmaptest\
+	$U/_shmtest\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

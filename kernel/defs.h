@@ -84,10 +84,19 @@ int             fifowrite(struct fifo *, uint64, int);
 int             fiforead(struct fifo *, uint64, int);
 
 // shm.c
-void            shmsinit();
+void            shminit();
 uint64          shmget(int, int, int);
 uint64          shmpa_get(int, int);
 int             shmclose(int);
+
+// msg.c
+void            msginit();
+int             msgget(int, int);
+int             msgdup(int);
+struct msg_msg* msgalloc();
+int             msgsnd(int, uint64, int);
+int             msgrcv(int, uint64, int, int);
+int             msgclose(int);
 
 // printf.c
 void            printf(char*, ...);
