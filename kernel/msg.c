@@ -134,7 +134,9 @@ msgsnd(int id, uint64 va, int length)
     msg->pre = msq->last_msg;
     msq->last_msg = msg;
   } else {
-    msq->first_msg = msq->last_msg = msg;
+
+    msq->first_msg = msg;
+    msq->last_msg = msg;
   }
   ++msq->msg_num;
   release(&msq->lock);
@@ -147,6 +149,7 @@ msgrcv(int id, uint64 va, int size, int type)
 {
   struct proc* p = myproc();
   struct msg_q* msq = &msg_qs[id];
+
   // 没实现阻塞队列，默认flag == MSG_NOWAIT
   if(msq->first_msg == 0){
     return -1;
@@ -159,7 +162,6 @@ msgrcv(int id, uint64 va, int size, int type)
       break;
     msg = msg->next;
   }
-
   if(msg == 0){
     release(&msq->lock);
     return -1;
@@ -184,12 +186,11 @@ msgrcv(int id, uint64 va, int size, int type)
   }
   --msq->msg_num;
   release(&msq->lock);
-
   
-  if(copyout(p->pagetable, (uint64)&msg->type, (char*)va, sizeof(msg->type)))
+  if(copyout(p->pagetable, va, (char*)&msg->type, sizeof(msg->type)))
     return -1;
   va += sizeof(msg->type);
-  if(copyout(p->pagetable, (uint64)&msg->data, (char*)va, msg->length))
+  if(copyout(p->pagetable, va, (char*)&msg->data, msg->length))
     return -1;
   int msg_length = msg->length;
   memset(msg, 0, sizeof(struct msg_msg));

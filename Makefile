@@ -140,6 +140,7 @@ UPROGS=\
 	$U/_chmod\
 	$U/_fifotest\
 	$U/_shmtest\
+	$U/_msgtest\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
