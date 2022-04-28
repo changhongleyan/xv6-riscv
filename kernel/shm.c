@@ -20,10 +20,8 @@ struct shm shms[NSHM];
 void
 shminit()
 {
-  char lkname[10] = "shmlock_";
   for(int i = 0; i < NSHM; ++i){
-    lkname[8] = 'a' + i;
-    initlock(&shms[i].lock, lkname);
+    initlock(&shms[i].lock, "shm");
   }
 }
 
@@ -38,8 +36,10 @@ shmget(int key, int size, int shmflg)
   int id = key % NSHM;
   struct shm* s = &shms[id];
   acquire(&s->lock);
-  if(s->ref == 0 && (shmflg & IPC_CREATE) == 0)
+  if(s->ref == 0 && (shmflg & IPC_CREATE) == 0){
+    release(&s->lock);
     return 0;
+  }
   ++s->ref;
   release(&s->lock);
   return mmap(p->sz, size, 0, 0, 0, 0, id);

@@ -115,6 +115,10 @@ extern uint64 sys_msgget(void);
 extern uint64 sys_msgsnd(void);
 extern uint64 sys_msgrcv(void);
 extern uint64 sys_msgclose(void);
+extern uint64 sys_semget(void);
+extern uint64 sys_sem_p(void);
+extern uint64 sys_sem_v(void);
+extern uint64 sys_semclose(void);
 
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -147,6 +151,10 @@ static uint64 (*syscalls[])(void) = {
 [SYS_msgsnd]  sys_msgsnd,
 [SYS_msgrcv]  sys_msgrcv,
 [SYS_msgclose] sys_msgclose,
+[SYS_semget]  sys_semget,
+[SYS_sem_p]   sys_sem_p,
+[SYS_sem_v]   sys_sem_v,
+[SYS_semclose] sys_semclose,
 };
 
 void

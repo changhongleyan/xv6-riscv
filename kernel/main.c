@@ -30,6 +30,7 @@ main()
     virtio_disk_init(); // emulated hard disk
     shminit();       // *shared memory
     msginit();       // *message queue
+    seminit();       // *semaphore
     userinit();      // first user process
     __sync_synchronize();
     started = 1;

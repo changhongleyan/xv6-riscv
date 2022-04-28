@@ -38,10 +38,8 @@ struct msg_q msg_qs[NMSQ];
 void
 msginit()
 {
-  char lkname[10] = "msqlock_";
   for(int i = 0; i < NMSQ; ++i){
-    lkname[8] = 'a' + i;
-    initlock(&msg_qs[i].lock, lkname);
+    initlock(&msg_qs[i].lock, "msg");
   }
 }
 
@@ -49,7 +47,8 @@ msginit()
 int
 msgget(int key, int msgflg)
 {
-  int id = key % NMSQ;
+  // proc->msg_qid[i] = 0 means unused，so id != 0
+  int id = key % (NMSQ-1) + 1;
   struct proc* p = myproc();
   struct msg_q* msq = &msg_qs[id];
 
@@ -74,7 +73,7 @@ msgget(int key, int msgflg)
     }
   }
   release(&msq->lock);
-  printf("msgget: process available message queue is full\n");
+  printf("msgget: max number of message queue\n");
   return -1;
 }
 
@@ -134,7 +133,6 @@ msgsnd(int id, uint64 va, int length)
     msg->pre = msq->last_msg;
     msq->last_msg = msg;
   } else {
-
     msq->first_msg = msg;
     msq->last_msg = msg;
   }
@@ -149,12 +147,12 @@ msgrcv(int id, uint64 va, int size, int type)
 {
   struct proc* p = myproc();
   struct msg_q* msq = &msg_qs[id];
-
+  
   // 没实现阻塞队列，默认flag == MSG_NOWAIT
   if(msq->first_msg == 0){
     return -1;
   }
-
+  
   acquire(&msq->lock);
   struct msg_msg* msg = msq->first_msg;
   while(msg){
@@ -201,7 +199,7 @@ msgrcv(int id, uint64 va, int size, int type)
 int
 msgclose(int id)
 {
-  if(id < 0 || id >= NMSQ){
+  if(id <= 0 || id >= NMSQ){
     printf("msgclose: id error\n");
     return -1;
   }

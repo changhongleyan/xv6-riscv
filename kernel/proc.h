@@ -81,8 +81,8 @@ struct trapframe {
 };
 
 
-#define PMSQSIZE 4
-#define PVMASIZE 16
+#define PMSQSIZE 4  // process message queue size
+#define PVMASIZE 16 // process struct vma size
 struct vma{
   int used;
   uint64 va; // virtual address

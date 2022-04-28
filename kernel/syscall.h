@@ -29,3 +29,7 @@
 #define SYS_msgsnd 28
 #define SYS_msgrcv 29
 #define SYS_msgclose 30
+#define SYS_semget 31
+#define SYS_sem_p  32
+#define SYS_sem_v  33
+#define SYS_semclose 34

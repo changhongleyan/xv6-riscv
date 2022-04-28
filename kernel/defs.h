@@ -98,6 +98,13 @@ int             msgsnd(int, uint64, int);
 int             msgrcv(int, uint64, int, int);
 int             msgclose(int);
 
+// sem.c
+void            seminit();
+int             semget(int);
+int             sem_p(int);
+int             sem_v(int);
+int             semclose(int);
+
 // printf.c
 void            printf(char*, ...);
 void            panic(char*) __attribute__((noreturn));
@@ -122,6 +129,7 @@ void            sleep(void*, struct spinlock*);
 void            userinit(void);
 int             wait(uint64);
 void            wakeup(void*);
+void            wakeup1p(void*);
 void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);

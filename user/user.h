@@ -32,6 +32,10 @@ int msgget(int key, int msgflg);
 int msgsnd(int id, void* addr, int length);
 int msgrcv(int id, void* addr, int size, int type);
 int msgclose(int id);
+int semget(int initvalue);
+int sem_p(int id);
+int sem_v(int id);
+int semclose(int id);
 
 // ulib.c
 int stat(const char*, struct stat*);

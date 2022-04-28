@@ -27,6 +27,7 @@ OBJS = \
   $K/fifo.o \
   $K/shm.o \
   $K/msg.o \
+  $K/sem.o \
   $K/exec.o \
   $K/sysfile.o \
   $K/kernelvec.o \

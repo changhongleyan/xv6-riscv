@@ -45,3 +45,7 @@ entry("msgget");
 entry("msgsnd");
 entry("msgrcv");
 entry("msgclose");
+entry("semget");
+entry("sem_p");
+entry("sem_v");
+entry("semclose");

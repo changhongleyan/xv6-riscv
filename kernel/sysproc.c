@@ -146,3 +146,39 @@ sys_msgclose(void)
     return -1;
   return msgclose(id);
 }
+
+uint64
+sys_semget()
+{
+  int initval;
+  if(argint(0, &initval))
+    return -1;
+  return semget(initval);
+}
+
+uint64
+sys_sem_p()
+{
+  int id;
+  if(argint(0, &id))
+    return -1;
+  return sem_p(id);
+}
+
+uint64
+sys_sem_v()
+{
+  int id;
+  if(argint(0, &id))
+    return -1;
+  return sem_v(id);
+}
+
+uint64
+sys_semclose()
+{
+  int id;
+  if(argint(0, &id))
+    return -1;
+  return semclose(id);
+}

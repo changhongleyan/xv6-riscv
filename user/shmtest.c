@@ -13,7 +13,7 @@ int
 main(int argc, char **argv)
 {
     int key = 2;
-    
+    int semid = semget(0);
     int pid = fork();
     if(pid == 0){
         struct data* p = (struct data*)shmget(key, sizeof(struct data), IPC_CREATE);
@@ -23,10 +23,7 @@ main(int argc, char **argv)
         }
         
         char readbuf[100];
-        printf("reading\n");
-        while(p->length == 0){
-            sleep(1);
-        }
+        sem_p(semid);
         memmove(readbuf, p->data, p->length);
         p->length -= strlen(readbuf);
         printf("read: %s\n", readbuf);
@@ -39,12 +36,11 @@ main(int argc, char **argv)
 
         char* buf = "Hello world!";
         p->length = 0;
-        printf("writing\n");
         memmove(p->data, buf, strlen(buf));
         p->length += strlen(buf);
-        printf("write OK\n");
+        sem_v(semid);
         wait(0);
     }
-    
+    semclose(semid);
     exit(0);
 }
