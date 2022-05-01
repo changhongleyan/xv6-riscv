@@ -348,11 +348,9 @@ sys_open(void)
   if(omode & O_RDFIFO){
     readi(f->ip, 0, (uint64)&f->fifo, 0, 8);
     f->readable = 1;
-    //f->fifo->readopen = 1;
   } else if(omode & O_WRFIFO){
     readi(f->ip, 0, (uint64)&f->fifo, 0, 8);
     f->writable = 1;
-    //f->fifo->writeopen = 1;
   }
 
   iunlock(ip);
@@ -569,7 +567,7 @@ sys_mkfifo(void)
   writei(ip, 0, (uint64)&fi, 0, 8);// &fi is kernel address, not user's, can't use filewrite
   
   ip->size = 8;
-  ip->mode = 4;                // fifo mode 00000101
+  ip->mode = 4;
   iupdate(ip);                 // save to disk
   //printf("inode%d size: %d ref: %d\n", ip->inum, ip->size, ip->ref);
   

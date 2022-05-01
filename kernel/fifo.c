@@ -29,8 +29,8 @@ fifoalloc()
   }
 
   fi->fa = (uint64)fa;
-  fi->readopen = 0;
-  fi->writeopen = 0;
+  fi->readopen = 1;
+  fi->writeopen = 1;
   fi->nwrite = 0;
   fi->nread = 0;
   initlock(&fi->lock, "fifo");
@@ -67,24 +67,19 @@ fifowrite(struct fifo *fi, uint64 src, int n)
   pr = myproc();
 
   acquire(&fi->lock);
-  fi->writeopen = 1;
-  //printf("%p readopen: %d writeopen: %d\n", fi, fi->readopen, fi->writeopen);
-  if(fi->readopen == 0){
-    sleep(&fi->nwrite, &fi->lock);
-  }
   while(i < n){
     if(fi->readopen == 0 || pr->killed){
       release(&fi->lock);
       return -1;
     }
     if(fi->nwrite == fi->nread + PGSIZE){ // fifowrite-full
-      wakeup(&fi->nread);
-      //printf("2write sleep\n");
+      wakeup1p(&fi->nread);
+      //printf("write sleep\n");
       sleep(&fi->nwrite, &fi->lock);
-      //printf("2write wake up\n");
+      //printf("write wake up\n");
     } else {
       uint len;
-      if(fi->nwrite % PGSIZE >= fi->nread % PGSIZE)    // ensure no overwrite
+      if(fi->nwrite / PGSIZE == fi->nread / PGSIZE)    // ensure no overwrite
         len = PGSIZE - fi->nwrite % PGSIZE;
       else
         len = fi->nread % PGSIZE - fi->nwrite % PGSIZE;
@@ -97,8 +92,7 @@ fifowrite(struct fifo *fi, uint64 src, int n)
       i += len;
     }
   }
-  
-  wakeup(&fi->nread);
+  wakeup1p(&fi->nread);
   release(&fi->lock);
   
   return i;
@@ -114,24 +108,21 @@ fiforead(struct fifo *fi, uint64 dst, int n)
   pr = myproc();
   
   acquire(&fi->lock);
-  fi->readopen = 1;
-  //printf("%p readopen: %d writeopen: %d\n", fi, fi->readopen, fi->writeopen);
-  if(fi->writeopen == 0){
-    sleep(&fi->nread, &fi->lock);
-  }
   while(fi->nread == fi->nwrite){  // fifo-empty
     if(pr->killed){
       release(&fi->lock);
       return -1;
     }
-    wakeup(&fi->nwrite);
+    wakeup1p(&fi->nwrite);
+    //printf("read sleep\n");
     sleep(&fi->nread, &fi->lock);
+    //printf("read wake up\n");
   }
   while(i < n){                       // fiforead-copy
     if(fi->nread == fi->nwrite)
       break;
     uint len;
-    if(fi->nwrite % PGSIZE >= fi->nread % PGSIZE)    // ensure no overread
+    if(fi->nwrite / PGSIZE == fi->nread / PGSIZE)    // ensure no overread
       len = fi->nwrite % PGSIZE - fi->nread % PGSIZE;
     else
       len = PGSIZE - fi->nread % PGSIZE;
@@ -143,7 +134,7 @@ fiforead(struct fifo *fi, uint64 dst, int n)
     fi->nread += len;
     i += len;
   }
-  wakeup(&fi->nwrite);
+  wakeup1p(&fi->nwrite);
   release(&fi->lock);
   return i;
 }

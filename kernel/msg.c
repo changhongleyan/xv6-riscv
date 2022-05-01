@@ -6,8 +6,8 @@
 #include "proc.h"
 #include "fcntl.h"
 
-#define NMSQ         16     // maximum number of message queue
-#define MAXMSGSIZE   128
+#define NMSQ         8     // maximum number of message queue
+#define MAXMSGSIZE   1024
 
 struct msg_msg{
   int used;
@@ -19,8 +19,9 @@ struct msg_msg{
 };
 
 // 因xv6未实现内存池，只能动态分配PGSIZE大小的内存，故预先分配好固定数量msg
-#define NMSG         16
+#define NMSG         64
 struct msg_msg msg_msgs[NMSG];
+struct spinlock getmsg;
 
 struct msg_q{
   int msg_num;
@@ -39,8 +40,9 @@ void
 msginit()
 {
   for(int i = 0; i < NMSQ; ++i){
-    initlock(&msg_qs[i].lock, "msg");
+    initlock(&msg_qs[i].lock, "msq");
   }
+  initlock(&getmsg, "getmsg");
 }
 
 
@@ -52,13 +54,13 @@ msgget(int key, int msgflg)
   struct proc* p = myproc();
   struct msg_q* msq = &msg_qs[id];
 
-  // find
+  // exist
   for(int i = 0; i < PMSQSIZE; ++i){
     if(p->msg_qid[i] == id)
       return id;
   }
 
-  // not find
+  // create
   acquire(&msq->lock);
   if(msq->ref == 0 && (msgflg & IPC_CREATE) == 0){
     release(&msq->lock);
@@ -80,6 +82,10 @@ msgget(int key, int msgflg)
 int
 msgdup(int id)
 {
+  if(id <= 0 || id >= NMSQ){
+    printf("msgdup: id error\n");
+    return -1;
+  }
   struct msg_q* msq = &msg_qs[id];
   acquire(&msq->lock);
   if(msq->ref < 1)
@@ -104,6 +110,10 @@ msgalloc()
 int
 msgsnd(int id, uint64 va, int length)
 {
+  if(id <= 0 || id >= NMSQ){
+    printf("msgsnd: id error\n");
+    return -1;
+  }
   if(length > MAXMSGSIZE){
     printf("msgsnd: exceed message max size\n");
     return -1;
@@ -112,10 +122,13 @@ msgsnd(int id, uint64 va, int length)
   struct proc* p = myproc();
   struct msg_q* msq = &msg_qs[id];
   // struct msg_msg* msg = (struct msg_msg*)kmalloc(sizeof(struct msg_msg));
-  struct msg_msg* msg = msgalloc();
-  if(msg == 0)
-    return -1;
-  
+  struct msg_msg* msg;
+  acquire(&getmsg);
+  while((msg = msgalloc()) == 0){
+    sleep(msq, &getmsg);
+  }
+  release(&getmsg);
+
   if(copyin(p->pagetable, (char*)&msg->type, va, sizeof(msg->type))){
     msg->used = 0;
     return -1;
@@ -145,6 +158,10 @@ msgsnd(int id, uint64 va, int length)
 int
 msgrcv(int id, uint64 va, int size, int type)
 {
+  if(id <= 0 || id >= NMSQ){
+    printf("msgrcv: id error\n");
+    return -1;
+  }
   struct proc* p = myproc();
   struct msg_q* msq = &msg_qs[id];
   
@@ -156,17 +173,12 @@ msgrcv(int id, uint64 va, int size, int type)
   acquire(&msq->lock);
   struct msg_msg* msg = msq->first_msg;
   while(msg){
-    if(msg->type == type)
+    if(msg->type == type && msg->length <= size)
       break;
     msg = msg->next;
   }
   if(msg == 0){
     release(&msq->lock);
-    return -1;
-  }
-  if(msg->length > size){
-    release(&msq->lock);
-    printf("msgrcv: exceed buffer size\n");
     return -1;
   }
 
@@ -176,6 +188,7 @@ msgrcv(int id, uint64 va, int size, int type)
   if(msg == msq->last_msg){
     msq->last_msg = msg->pre;
   }
+
   if(msg->pre){
     msg->pre->next = msg->next;
   }
@@ -192,6 +205,7 @@ msgrcv(int id, uint64 va, int size, int type)
     return -1;
   int msg_length = msg->length;
   memset(msg, 0, sizeof(struct msg_msg));
+  wakeup1p(msq);
 
   return msg_length;
 }
@@ -216,6 +230,5 @@ msgclose(int id)
   }
   int ref = msq->ref;
   release(&msq->lock);
-
   return ref;
 }

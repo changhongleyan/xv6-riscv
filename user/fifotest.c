@@ -10,7 +10,7 @@ main(int argc, char **argv)
 
     int pid = fork();
     if(pid == 0){
-        char* buf = "Hello world!";
+        char buf[] = "Hello world!";
         int fdw = open(path, O_WRFIFO);
         write(fdw, buf, strlen(buf));
         close(fdw);

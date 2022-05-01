@@ -124,7 +124,6 @@ fileread(struct file *f, uint64 addr, int n)
     // check mode
     if(f->ip->mode & 4 && f->fifo){
       iunlock(f->ip);
-      //printf("reading\n");
       return fiforead(f->fifo, addr, n);
     } else if((f->ip->mode & 1) == 0){
       iunlock(f->ip);

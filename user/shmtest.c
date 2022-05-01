@@ -2,8 +2,7 @@
 #include "kernel/fcntl.h"
 #include "user/user.h"
 
-#define PGSIZE  4096
-#define MAXSIZE 1000
+#define MAXSIZE 1024
 struct data{
     int length;
     char data[MAXSIZE];
@@ -13,34 +12,34 @@ int
 main(int argc, char **argv)
 {
     int key = 2;
-    int semid = semget(0);
-    int pid = fork();
-    if(pid == 0){
-        struct data* p = (struct data*)shmget(key, sizeof(struct data), IPC_CREATE);
-        if(p == 0){
-            printf("shmget: error\n");
-            exit(1);
-        }
-        
-        char readbuf[100];
-        sem_p(semid);
-        memmove(readbuf, p->data, p->length);
-        p->length -= strlen(readbuf);
-        printf("read: %s\n", readbuf);
-    } else {
-        struct data* p = (struct data*)shmget(key, sizeof(struct data), IPC_CREATE);
-        if(p == 0){
-            printf("shmget: error\n");
-            exit(1);
-        }
+    int synchro = semget(0);
 
-        char* buf = "Hello world!";
+    int pid = fork();
+    if(pid){
+        struct data* p = (struct data*)shmget(key, sizeof(struct data), IPC_CREATE);
+        char buf[] = "Hello world!";
         p->length = 0;
+
         memmove(p->data, buf, strlen(buf));
         p->length += strlen(buf);
-        sem_v(semid);
+        sem_v(synchro);
+
         wait(0);
+    } else {
+        struct data* p = (struct data*)shmget(key, sizeof(struct data), IPC_CREATE);
+        char readbuf[MAXSIZE];
+        
+        sem_p(synchro);
+        int n = p->length;
+        if(p->length > MAXSIZE){
+            n = MAXSIZE;
+        }
+        memmove(readbuf, p->data, n);
+        p->length -= n;
+        
+        printf("read: %s\n", readbuf);
     }
-    semclose(semid);
+
+    semclose(synchro);
     exit(0);
 }

@@ -142,7 +142,8 @@ UPROGS=\
 	$U/_fifotest\
 	$U/_shmtest\
 	$U/_msgtest\
-
+	$U/_ipctest\
+	
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
 

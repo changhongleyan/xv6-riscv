@@ -481,5 +481,5 @@ mmap(uint64 va, int length, int prot, int flags, struct file* f, int offset, int
       return p->vma[i].va;
     }
   }
-  return -1;
+  return 0;
 }

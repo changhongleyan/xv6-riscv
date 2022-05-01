@@ -51,6 +51,7 @@ sem_p(int id)
     }
 
     --sem->count;
+    //printf("%d p: %d\n", id, sem->count);
     if(sem->count < 0){
         sleep(sem, &sem->lock);
     }
@@ -69,6 +70,7 @@ sem_v(int id)
     }
 
     ++sem->count;
+    //printf("%d v: %d\n", id, sem->count);
     if(sem->count <= 0){
         wakeup1p(sem);
     }
