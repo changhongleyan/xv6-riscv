@@ -52,7 +52,8 @@ fifoclose(struct fifo *fi, int writable)
   
   if(fi->readopen == 0 && fi->writeopen == 0){
     release(&fi->lock);
-    kfree((char*)fi);
+    kfree((void*)fi->fa);
+    kfree(fi);
   } else
     release(&fi->lock);
 }

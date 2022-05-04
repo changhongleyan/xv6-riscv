@@ -25,7 +25,7 @@ shminit()
   }
 }
 
-uint64
+int
 shmget(int key, int size, int shmflg)
 { 
   struct proc* p = myproc();
@@ -38,7 +38,7 @@ shmget(int key, int size, int shmflg)
 
   // exist
   for(int i = 0; i < PVMASIZE; ++i){
-    if(p->vma[i].used &&  p->vma[i].shmid == id)
+    if(p->vma[i].used && p->vma[i].shmid == id)
       return id;
   }
 
@@ -50,7 +50,21 @@ shmget(int key, int size, int shmflg)
   }
   ++s->ref;
   release(&s->lock);
-  return mmap(p->sz, size, 0, 0, 0, 0, id);
+  mmap(p->sz, size, 0, 0, 0, 0, id);
+  return id;
+}
+
+uint64
+shmva_get(int id)
+{ 
+  if(id < 0 || id >= NSHM)
+    return 0;
+  struct proc* p = myproc();
+  for(int i = 0; i < PVMASIZE; ++i){
+    if(p->vma[i].used && p->vma[i].shmid == id)
+      return p->vma[i].va;
+  }
+  return 0;
 }
 
 uint64
@@ -60,12 +74,26 @@ shmpa_get(int id, int nth)
     return 0;
   struct shm* s = &shms[id];
   uint64* pap = &s->pas[nth]; // physical address pointer
+  uint64 pa;
   acquire(&s->lock);
   if(*pap == 0){
     *pap = (uint64)kalloc();
   }
+  pa = *pap;
   release(&s->lock);
-  return *pap;
+  return pa;
+}
+
+int
+shmdup(int id)
+{
+  struct shm* s = &shms[id];
+  acquire(&s->lock);
+  if(s->ref < 1)
+    panic("shmdup");
+  ++s->ref;
+  release(&s->lock);
+  return id;
 }
 
 // return shared memory's reference count

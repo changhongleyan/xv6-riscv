@@ -110,6 +110,40 @@ sys_shmget(void)
 }
 
 uint64
+sys_shmva_get(void)
+{ 
+  int id;
+  if(argint(0, &id))
+    return -1;
+  return shmva_get(id);
+}
+
+uint64
+sys_shmclose(void)
+{ 
+  int id;
+  if(argint(0, &id))
+    return -1;
+  struct proc* p = myproc();
+
+  for(int i = 0; i < PVMASIZE; i++) {
+    struct vma* vma = &p->vma[i];
+    if(vma->used) {
+      if(vma->shmid == id){
+        int do_free = 1;
+        if(shmclose(id)){
+          do_free = 0;
+        }
+        uvmunmap(p->pagetable, vma->va, vma->length/PGSIZE, do_free);
+        vma->used = 0;
+        return 0;
+      }
+    }
+  }
+  return -1;
+}
+
+uint64
 sys_msgget(void)
 {
   int key, msgflg;
@@ -144,7 +178,15 @@ sys_msgclose(void)
   int id;
   if(argint(0, &id))
     return -1;
-  return msgclose(id);
+  struct proc* p = myproc();
+  for(int i = 0; i < PMSQSIZE; ++i){
+    if(p->msg_qid[i] == id){
+      msgclose(p->msg_qid[i]);
+      p->msg_qid[i] = 0;
+      return 0;
+    }
+  }
+  return -1;
 }
 
 uint64

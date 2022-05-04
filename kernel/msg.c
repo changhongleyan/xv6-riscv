@@ -18,7 +18,7 @@ struct msg_msg{
   int length;
 };
 
-// 因xv6未实现内存池，只能动态分配PGSIZE大小的内存，故预先分配好固定数量msg
+// 每次只能动态分配PGSIZE大小的内存，内存占用过高，故预先分配好固定数量msg
 #define NMSG         64
 struct msg_msg msg_msgs[NMSG];
 struct spinlock getmsg;
@@ -82,10 +82,6 @@ msgget(int key, int msgflg)
 int
 msgdup(int id)
 {
-  if(id <= 0 || id >= NMSQ){
-    printf("msgdup: id error\n");
-    return -1;
-  }
   struct msg_q* msq = &msg_qs[id];
   acquire(&msq->lock);
   if(msq->ref < 1)
@@ -100,6 +96,7 @@ msgalloc()
 {
   for(int i = 0; i < NMSG; ++i){
     if(msg_msgs[i].used == 0){
+      //printf("%d\n", i);
       msg_msgs[i].used = 1;
       return &msg_msgs[i];
     }
@@ -123,6 +120,7 @@ msgsnd(int id, uint64 va, int length)
   struct msg_q* msq = &msg_qs[id];
   // struct msg_msg* msg = (struct msg_msg*)kmalloc(sizeof(struct msg_msg));
   struct msg_msg* msg;
+
   acquire(&getmsg);
   while((msg = msgalloc()) == 0){
     sleep(msq, &getmsg);
@@ -196,6 +194,7 @@ msgrcv(int id, uint64 va, int size, int type)
     msg->next->pre = msg->pre;
   }
   --msq->msg_num;
+  //printf(" %d\n", msq->msg_num);
   release(&msq->lock);
   
   if(copyout(p->pagetable, va, (char*)&msg->type, sizeof(msg->type)))
@@ -204,7 +203,14 @@ msgrcv(int id, uint64 va, int size, int type)
   if(copyout(p->pagetable, va, (char*)&msg->data, msg->length))
     return -1;
   int msg_length = msg->length;
-  memset(msg, 0, sizeof(struct msg_msg));
+  
+  //acquire(&getmsg);
+  msg->pre = 0;
+  msg->next = 0;
+  msg->used = 0;
+  //memset(msg, 0, sizeof(struct msg_msg));
+  //release(&getmsg);
+
   wakeup1p(msq);
 
   return msg_length;

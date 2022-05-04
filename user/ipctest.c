@@ -4,7 +4,7 @@
 
 #define SEGSIZE 1024
 #define M 1024 * 1024
-#define EPOCH 16 * 1024
+#define EPOCH 128 * 1024
 
 #define READ 0
 #define WRITE 1
@@ -24,9 +24,7 @@ ipc_pipe()
         }
         close(fd[WRITE]);
         wait(0);
-    }
-    else
-    {
+    } else {
         char readbuf[SEGSIZE];
         close(fd[WRITE]);
         for(int i = 0; i < EPOCH; ++i){
@@ -58,9 +56,7 @@ ipc_fifo()
         }
         close(fdw);
         wait(0);
-    }
-    else
-    {
+    } else {
         char readbuf[SEGSIZE];
         int fdr = open(path, O_RDFIFO);
         for(int i = 0; i < EPOCH; ++i){
@@ -80,33 +76,33 @@ struct msgbuf{
     char data[SEGSIZE];
 };
 int
-ipc_msg()
+ipc_msg(int key)
 {
-    int key = 2;
-    int semid = semget(0);
+    int msgid;
+    int synchro = semget(0);
     int tick0 = uptime();
 
     int pid = fork();
     if(pid){
-        int msgid = msgget(key, IPC_CREATE);
+        msgid = msgget(key, IPC_CREATE);
         struct msgbuf sndbuf = {123};
         for(int i = 0; i < EPOCH; ++i){
             memset(sndbuf.data, i, sizeof(sndbuf.data));
             msgsnd(msgid, &sndbuf, sizeof(sndbuf.data));
-            sem_v(semid);
+            sem_v(synchro);
         }
         wait(0);
     } else {
-        int msgid = msgget(key, IPC_CREATE);
+        msgid = msgget(key, IPC_CREATE);
         struct msgbuf rcvbuf;
         for(int i = 0; i < EPOCH; ++i){
-            sem_p(semid);
+            sem_p(synchro);
             msgrcv(msgid, &rcvbuf, sizeof(rcvbuf.data), 123);
             memset(rcvbuf.data, 0, sizeof(rcvbuf.data));
         }
     }
-
-    semclose(semid);
+    semclose(synchro);
+    msgclose(msgid);
     if(pid)
         return uptime() - tick0;
     else
@@ -119,16 +115,17 @@ struct shmbuf{
     char data[16 * SEGSIZE];
 };
 int
-ipc_shm()
+ipc_shm(int key)
 {
-    int key = 2;
+    int shmid;
     int mutex = semget(1);
     int synchro = semget(0);
     int tick0 = uptime();
 
     int pid = fork();
     if(pid){
-        struct shmbuf* p = (struct shmbuf*)shmget(key, sizeof(struct shmbuf), IPC_CREATE);
+        shmid = shmget(key, sizeof(struct shmbuf), IPC_CREATE);
+        struct shmbuf* p = (struct shmbuf*)shmva_get(shmid);
         p->size = sizeof(p->data);
         p->length = 0;
         sem_v(synchro);
@@ -144,11 +141,11 @@ ipc_shm()
             p->length = p->size;
             sem_v(mutex);
             i += n / SEGSIZE;
-            
         }
         wait(0);
     } else {
-        struct shmbuf* p = (struct shmbuf*)shmget(key, sizeof(struct shmbuf), IPC_CREATE);
+        shmid = shmget(key, sizeof(struct shmbuf), IPC_CREATE);;
+        struct shmbuf* p = (struct shmbuf*)shmva_get(shmid);
         sem_p(synchro);
         for(int i = 0; i < EPOCH;){
             int n;
@@ -166,6 +163,7 @@ ipc_shm()
     }
     semclose(mutex);
     semclose(synchro);
+    shmclose(shmid);
     if(pid)
         return uptime() - tick0;
     else
@@ -175,9 +173,12 @@ ipc_shm()
 int
 main(int argc, char **argv)
 {
-    printf("pipe: %d\n", ipc_pipe());
-    printf("fifo: %d\n", ipc_fifo());
-    printf("msg: %d\n", ipc_msg());
-    printf("shm: %d\n", ipc_shm());
+    for(int i = 0; i < 10; ++i){
+        printf("%d ", i);
+        printf("pipe: %d ", ipc_pipe());
+        printf("fifo: %d ", ipc_fifo());
+        printf("msg: %d ", ipc_msg(i));
+        printf("shm: %d\n", ipc_shm(i));
+    }
     exit(0);
 }

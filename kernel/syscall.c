@@ -111,6 +111,8 @@ extern uint64 sys_mkfifo(void);
 extern uint64 sys_mmap(void);
 extern uint64 sys_munmap(void);
 extern uint64 sys_shmget(void);
+extern uint64 sys_shmva_get(void);
+extern uint64 sys_shmclose(void);
 extern uint64 sys_msgget(void);
 extern uint64 sys_msgsnd(void);
 extern uint64 sys_msgrcv(void);
@@ -147,6 +149,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_mmap]    sys_mmap,
 [SYS_munmap]  sys_munmap,
 [SYS_shmget]  sys_shmget,
+[SYS_shmva_get] sys_shmva_get,
+[SYS_shmclose] sys_shmclose,
 [SYS_msgget]  sys_msgget,
 [SYS_msgsnd]  sys_msgsnd,
 [SYS_msgrcv]  sys_msgrcv,

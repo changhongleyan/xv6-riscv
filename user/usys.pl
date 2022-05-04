@@ -41,6 +41,8 @@ entry("mkfifo");
 entry("mmap");
 entry("munmap");
 entry("shmget");
+entry("shmva_get");
+entry("shmclose");
 entry("msgget");
 entry("msgsnd");
 entry("msgrcv");

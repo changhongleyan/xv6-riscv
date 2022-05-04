@@ -85,8 +85,10 @@ int             fiforead(struct fifo *, uint64, int);
 
 // shm.c
 void            shminit();
-uint64          shmget(int, int, int);
+int             shmget(int, int, int);
+uint64          shmva_get(int);
 uint64          shmpa_get(int, int);
+int             shmdup(int);
 int             shmclose(int);
 
 // msg.c

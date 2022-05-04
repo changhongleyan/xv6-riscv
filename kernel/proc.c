@@ -303,14 +303,17 @@ fork(void)
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
-
+  
   pid = np->pid;
-
+  
   // copy memory map.
   for(int i = 0; i < PVMASIZE; i++) {
     if(p->vma[i].used){
+      if(p->vma[i].file)
+        filedup(p->vma[i].file);
+      if(p->vma[i].shmid != -1)
+        shmdup(p->vma[i].shmid);
       memmove(&(np->vma[i]), &(p->vma[i]), sizeof(p->vma[i]));
-      filedup(p->vma[i].file);
     }
   }
 

@@ -16,7 +16,8 @@ main(int argc, char **argv)
 
     int pid = fork();
     if(pid){
-        struct data* p = (struct data*)shmget(key, sizeof(struct data), IPC_CREATE);
+        int shmid = shmget(key, sizeof(struct data), IPC_CREATE);
+        struct data* p = (struct data*)shmva_get(shmid);
         char buf[] = "Hello world!";
         p->length = 0;
 
@@ -26,7 +27,8 @@ main(int argc, char **argv)
 
         wait(0);
     } else {
-        struct data* p = (struct data*)shmget(key, sizeof(struct data), IPC_CREATE);
+        int shmid = shmget(key, sizeof(struct data), IPC_CREATE);
+        struct data* p = (struct data*)shmva_get(shmid);
         char readbuf[MAXSIZE];
         
         sem_p(synchro);
