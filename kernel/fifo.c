@@ -5,6 +5,8 @@
 #include "spinlock.h"
 #include "proc.h"
 
+#define FIFOSIZE 512
+
 struct fifo {
   struct spinlock lock;
   uint64 fa;      // pipe file address

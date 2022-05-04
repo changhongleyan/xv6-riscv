@@ -3,8 +3,7 @@
 #include "user/user.h"
 
 #define SEGSIZE 1024
-#define M 1024 * 1024
-#define EPOCH 128 * 1024
+#define EPOCH 256 * 1024
 
 #define READ 0
 #define WRITE 1
@@ -28,10 +27,10 @@ ipc_pipe()
         char readbuf[SEGSIZE];
         close(fd[WRITE]);
         for(int i = 0; i < EPOCH; ++i){
-            read(fd[WRITE], readbuf, sizeof(readbuf));
+            read(fd[READ], readbuf, sizeof(readbuf));
             memset(readbuf, 0, sizeof(readbuf));
         }
-        close(fd[WRITE]);
+        close(fd[READ]);
     }
     if(pid)
         return uptime() - tick0;
@@ -112,7 +111,7 @@ ipc_msg(int key)
 struct shmbuf{
     int length;
     int size;
-    char data[16 * SEGSIZE];
+    char data[8 * SEGSIZE];
 };
 int
 ipc_shm(int key)
@@ -173,12 +172,13 @@ ipc_shm(int key)
 int
 main(int argc, char **argv)
 {
-    for(int i = 0; i < 10; ++i){
+    for(int i = 0; i < 20; ++i){
         printf("%d ", i);
-        printf("pipe: %d ", ipc_pipe());
-        printf("fifo: %d ", ipc_fifo());
-        printf("msg: %d ", ipc_msg(i));
-        printf("shm: %d\n", ipc_shm(i));
+        //printf("pipe: %d ", ipc_pipe());
+        //printf("fifo: %d ", ipc_fifo());
+        //printf("msg: %d ", ipc_msg(i));
+        printf("shm: %d ", ipc_shm(i));
+        printf("\n");
     }
     exit(0);
 }
